@@ -263,8 +263,24 @@ def main():
     app.add_handler(CommandHandler("signal", signal_command))
     for command, symbol in SYMBOLS.items():
         app.add_handler(CommandHandler(command, make_symbol_handler(symbol)))
-    log.info("AI TRADER PRO démarre.")
-    app.run_polling(drop_pending_updates=True)
+    log.info("AI TRADER PRO démarre en mode webhook.")
+    render_url = os.getenv("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
+    if not render_url:
+        raise RuntimeError("RENDER_EXTERNAL_URL est absent. Déploie le bot comme Web Service sur Render.")
+    port = int(os.getenv("PORT", "10000"))
+    webhook_path = "telegram"
+    webhook_secret = __import__("hashlib").sha256(
+        ("AI-TRADER-PRO:" + TOKEN).encode("utf-8")
+    ).hexdigest()[:32]
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=webhook_path,
+        webhook_url=f"{render_url}/{webhook_path}",
+        secret_token=webhook_secret,
+        drop_pending_updates=True,
+        allowed_updates=Update.ALL_TYPES,
+    )
 
 
 if __name__ == "__main__":
